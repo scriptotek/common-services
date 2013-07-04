@@ -160,7 +160,10 @@ foreach ($xml->xpath("/srw:searchRetrieveResponse/srw:records/srw:record") as $r
                   array_push($output['keywords'], $tmp);
                 break;
             case 700:
-                $output['added_author'] = strval(current($node->xpath('marc:subfield[@code="a"]')));
+                $output['added_author'] = array(
+                    'name' => strval(current($node->xpath('marc:subfield[@code="a"]')))
+                );
+                $output['added_author']['authority'] = strval(current($node->xpath('marc:subfield[@code="0"]')));
                 break;
         }
     }
