@@ -1,0 +1,3 @@
+[submodule "customxmlelement"]
+	path = customxmlelement
+	url = git@labs.biblionaut:customxmlelement.git

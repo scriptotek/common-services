@@ -1,7 +1,10 @@
 <?php
 
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
 require_once('marcparser.php');
-require_once('customxmlelement.php');
+require_once('customxmlelement/customxmlelement.php');
 
 function usage() {
     header('Content-type: text/plain;charset=UTF-8');
