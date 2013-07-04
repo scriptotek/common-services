@@ -4,6 +4,7 @@ function marc_parser($record, &$output) {
 
     $output['control_number'] = $record->text('marc:controlfield[@tag="001"]');
     $output['authors'] = array();
+    $output['electronic'] = false;
 
     foreach ($record->xpath('marc:datafield') as $node) {
         $marcfield = intval($node->attributes()->tag);
@@ -52,6 +53,9 @@ function marc_parser($record, &$output) {
             case 245:
                 $output['title'] = $node->text('marc:subfield[@code="a"]');
                 $output['subtitle'] = $node->text('marc:subfield[@code="b"]');
+                if (preg_match('elektronisk ressurs', $node->text('marc:subfield[@code="h"]'))) {
+                    $output['electronic'] = true;
+                }
                 break;
             case 250:
                 $output['edition'] = $node->text('marc:subfield[@code="a"]');
