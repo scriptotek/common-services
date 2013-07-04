@@ -160,7 +160,7 @@ if ($repo['proto'] == 'z39.50') {
     );
     yaz_ccl_conf($c, $fields);
 
-    if (!yaz_ccl_parse($c, $qs, &$cclresult)) {
+    if (!yaz_ccl_parse($c, $qs, $cclresult)) {
         die('ccl: ' . $cclresult);
     }
     $rpn = $cclresult['rpn'];
@@ -186,13 +186,15 @@ if ($repo['proto'] == 'z39.50') {
         $xml->registerXPathNamespaces($ns);
 
         foreach ($xml->xpath("marc:record") as $record) {
-            marc_parser($record, &$output);
+            marc_parser($record, $output);
         }
     }
 
 } else {
     $qs = make_query($qs, 1, 1, $repo['schema']);
     $baseurl = $repo['url'];
+
+    //print "$baseurl$qs";
     $source = file_get_contents2("$baseurl$qs");
 
     $output['sru_url'] = "$baseurl$qs";
@@ -214,14 +216,19 @@ if ($repo['proto'] == 'z39.50') {
         $output['subjects'] = array();
         $output['dewey'] = '';
 
-        $v = $record->first('srw:recordData/marc:record/marc:datafield[@tag="082"][@ind1="0"]/marc:subfield[@code="a"]');
+        $v = $record->first('srw:recordData/marc:record/marc:datafield[@tag="082"]/marc:subfield[@code="a"]');
         if ($v !== false) {
             $output['dewey'] = str_replace('/', '', (string)$v);
+        } else {
+            $v = $record->first('srw:recordData/marc:record/marc:datafield[@tag="089"]/marc:subfield[@code="a"]');
+            if ($v !== false) {
+                $output['dewey'] = str_replace('/', '', (string)$v);
+            }
         }
 
         $marc_rec = $record->first('srw:recordData/marc:record');
 
-        marc_parser($marc_rec, &$output);
+        marc_parser($marc_rec, $output);
 
     }
 }
