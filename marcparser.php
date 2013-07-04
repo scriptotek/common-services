@@ -3,6 +3,7 @@
 function marc_parser($record, &$output) {
 
     $output['control_number'] = $record->text('marc:controlfield[@tag="001"]');
+    $output['authors'] = array();
 
     foreach ($record->xpath('marc:datafield') as $node) {
         $marcfield = intval($node->attributes()->tag);
@@ -41,14 +42,19 @@ function marc_parser($record, &$output) {
                 break;
 
             case 100:
-                $output['main_author'] = array(
-                    'name' => $node->text('marc:subfield[@code="a"]')
+                $author = array(
+                    'name' => $node->text('marc:subfield[@code="a"]'),
+                    'authority' => $node->text('marc:subfield[@code="0"]'),
+                    'role' => 'main'
                 );
-                $output['main_author']['authority'] = $node->text('marc:subfield[@code="0"]');
+                $output['authors'][] = $author;
                 break;
             case 245:
                 $output['title'] = $node->text('marc:subfield[@code="a"]');
                 $output['subtitle'] = $node->text('marc:subfield[@code="b"]');
+                break;
+            case 250:
+                $output['edition'] = $node->text('marc:subfield[@code="a"]');
                 break;
             case 260:
                 $output['publisher'] = $node->text('marc:subfield[@code="b"]');
@@ -79,14 +85,40 @@ function marc_parser($record, &$output) {
                   array_push($output['subjects'], $tmp);
                 break;
             case 700:
-                $output['added_author'] = $node->text('marc:subfield[@code="a"]');
+                $author = array(
+                    'name' => $node->text('marc:subfield[@code="a"]'),
+                    'authority' => $node->text('marc:subfield[@code="0"]'),
+                    'role' => 'added'
+                );
+                $output['authors'][] = $author;
                 break;
             case 856:
+            case 956:
+                # MARC 21 uses field 856 for electronic "links", where you can have URLs for example covers images and/or blurbs.
+                # 956 ?
+
+                    // <marc:datafield tag="856" ind1="4" ind2="2">
+                    //     <marc:subfield code="3">Beskrivelse fra forlaget (kort)</marc:subfield>
+                    //     <marc:subfield code="u">http://content.bibsys.no/content/?type=descr_publ_brief&amp;isbn=0521176832</marc:subfield>
+                    // </marc:datafield>
+                    // <marc:datafield tag="956" ind1="4" ind2="2">
+                    //     <marc:subfield code="3">Omslagsbilde</marc:subfield>
+                    //     <marc:subfield code="u">http://innhold.bibsys.no/bilde/forside/?size=mini&amp;id=9780521176835.jpg</marc:subfield>
+                    //     <marc:subfield code="q">image/jpeg</marc:subfield>
+                    // </marc:datafield>
                 $desc = $node->text('marc:subfield[@code="3"]');
-                if ($desc === 'Cover image') {
-                    $output['cover'] = $node->text('marc:subfield[@code="u"]');
+                if (in_array($desc, array('Cover image', 'Omslagsbilde'))) {
+                    $output['cover_image'] = $node->text('marc:subfield[@code="u"]');
+                }
+                if (in_array($desc, array('Beskrivelse fra forlaget (kort)', 'Beskrivelse fra forlaget (lang)'))) {
+                    $output['description'] = $node->text('marc:subfield[@code="u"]');
                 }
                 break;
+
+             
+                break;
+    description: 856 u  hvis 856 3 = Beskrivelse fra forlaget
+    cover: 956 u  hvis 856 3 = Omslagsbilde
 
         }
     }
