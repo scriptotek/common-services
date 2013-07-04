@@ -53,7 +53,7 @@ function marc_parser($record, &$output) {
             case 245:
                 $output['title'] = $node->text('marc:subfield[@code="a"]');
                 $output['subtitle'] = $node->text('marc:subfield[@code="b"]');
-                if (preg_match('elektronisk ressurs', $node->text('marc:subfield[@code="h"]'))) {
+                if (preg_match('/elektronisk ressurs/', $node->text('marc:subfield[@code="h"]'))) {
                     $output['electronic'] = true;
                 }
                 break;
