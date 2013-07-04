@@ -92,7 +92,7 @@ foreach ($xml->xpath("/srw:searchRetrieveResponse/srw:records/srw:record") as $r
 
     $v = $record->xpath('srw:recordData/marc:record/marc:datafield[@tag="082"][@ind1="0"]/marc:subfield[@code="a"]');
     if (count($v) > 0) {
-        $output['dewey'] = strval($v[0]);        
+        $output['dewey'] = str_replace('/', '', strval($v[0]));
     }
 
     $mr = $record->xpath('srw:recordData/marc:record');
@@ -115,6 +115,7 @@ foreach ($xml->xpath("/srw:searchRetrieveResponse/srw:records/srw:record") as $r
             case 82:
                 if (!isset($output['klass'])) $output['klass'] = array();
                 $klass = strval(current($node->xpath('marc:subfield[@code="a"]')));
+                $klass = str_replace('/', '', $klass);
                 foreach ($output['klass'] as $kitem) {
                     if (($kitem['kode'] == $klass) && ($kitem['system'] == 'dewey')) {
                         continue 3;
@@ -125,6 +126,7 @@ foreach ($xml->xpath("/srw:searchRetrieveResponse/srw:records/srw:record") as $r
             case 89:
                 if (!isset($output['klass'])) $output['klass'] = array();
                 $klass = strval(current($node->xpath('marc:subfield[@code="a"]')));
+                $klass = str_replace('/', '', $klass);
                 foreach ($output['klass'] as $kitem) {
                     if (($kitem['kode'] == $klass) && ($kitem['system'] == 'dewey')) {
                         continue 3;
