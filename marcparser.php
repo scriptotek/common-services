@@ -1,6 +1,6 @@
 <?php
 
-function marc_parser($record, $output) {
+function marc_parser($record, &$output) {
 
     $output['control_number'] = $record->text('marc:controlfield[@tag="001"]');
 
