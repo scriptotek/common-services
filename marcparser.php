@@ -70,6 +70,28 @@ function marc_parser($record, &$output) {
             case 491:
                 $output['series'] = $node->text('marc:subfield[@code="a"]');
                 break;
+
+            case 505:
+
+                // <datafield tag="520" ind1=" " ind2=" ">
+                //     <subfield code="a">"The conceptual changes brought by modern physics are important, radical and fascinating, yet they are only vaguely understood by people working outside the field. Exploring the four pillars of modern physics - relativity, quantum mechanics, elementary particles and cosmology - this clear and lively account will interest anyone who has wondered what Einstein, Bohr, Schro&#x308;dinger and Heisenberg were really talking about. The book discusses quarks and leptons, antiparticles and Feynman diagrams, curved space-time, the Big Bang and the expanding Universe. Suitable for undergraduate students in non-science as well as science subjects, it uses problems and worked examples to help readers develop an understanding of what recent advances in physics actually mean"--</subfield>
+                //     <subfield code="c">Provided by publisher.</subfield>
+                // </datafield>
+                $output['contents'] = $node->text('marc:subfield[@code="a"]');
+                break;
+
+            case 520:
+
+                // <datafield tag="520" ind1=" " ind2=" ">
+                //     <subfield code="a">"The conceptual changes brought by modern physics are important, radical and fascinating, yet they are only vaguely understood by people working outside the field. Exploring the four pillars of modern physics - relativity, quantum mechanics, elementary particles and cosmology - this clear and lively account will interest anyone who has wondered what Einstein, Bohr, Schro&#x308;dinger and Heisenberg were really talking about. The book discusses quarks and leptons, antiparticles and Feynman diagrams, curved space-time, the Big Bang and the expanding Universe. Suitable for undergraduate students in non-science as well as science subjects, it uses problems and worked examples to help readers develop an understanding of what recent advances in physics actually mean"--</subfield>
+                //     <subfield code="c">Provided by publisher.</subfield>
+                // </datafield>
+                $output['summary'] = array(
+                    'assigning_source' => $node->text('marc:subfield[@code="c"]'),
+                    'text' => $node->text('marc:subfield[@code="a"]')
+                );
+                break;
+
             case 650:
                 $emne = $node->text('marc:subfield[@code="a"]');
                   $tmp = array('emne' => trim($emne, '.'));
@@ -96,6 +118,19 @@ function marc_parser($record, &$output) {
                 );
                 $output['authors'][] = $author;
                 break;
+
+            case 776:
+                    // <marc:datafield tag="776" ind1="0" ind2=" ">
+                    //     <marc:subfield code="z">9781107602175</marc:subfield>
+                    //     <marc:subfield code="w">(NO-TrBIB)132191512</marc:subfield>
+                    // </marc:datafield>
+                $form = array(
+                    'isbn' => $node->text('marc:subfield[@code="z"]'),
+                    'recordid' => preg_replace('/\(NO-TrBIB\)/', '', $node->text('marc:subfield[@code="w"]'))
+                );
+                $output['other_form'] = $form;
+                break;
+
             case 856:
             case 956:
                 # MARC 21 uses field 856 for electronic "links", where you can have URLs for example covers images and/or blurbs.
