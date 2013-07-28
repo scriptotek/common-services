@@ -6,7 +6,7 @@ ini_set('display_errors', '1');
 require_once('../marcparser.php');
 require_once('../customxmlelement/customxmlelement.php');
 
-function usage() {
+function usage($repos) {
     header('Content-type: text/plain;charset=UTF-8');
     print "Bruk: \n\n"
         . "    " . $_SERVER['PHP_SELF'] ."?objektid=<number>\n\n"
@@ -14,18 +14,30 @@ function usage() {
         . "    " . $_SERVER['PHP_SELF'] ."?isbn=<isbn>&repo=<repo>\n\n"
         . " der <objektid> eller <dokid> er et gyldig objektid eller dokid. <repo> kan ha en av verdiene 'bibsys', 'loc', 'libris' eller 'bl'."
         . "Eksempel:\n\n    " . $_SERVER['PHP_SELF'] ."?objektid=052073475\n\n"
-        . "For å få resultatene i JSONP istedetfor JSON; bruk callback. Eksempel:\n\n    " . $_SERVER['PHP_SELF'] ."?objektid=052073475&callback=minfunksjon\n";
+        . "For å få resultatene i JSONP istedetfor JSON; bruk callback. Eksempel:\n\n    " . $_SERVER['PHP_SELF'] ."?objektid=052073475&callback=minfunksjon\n"
+        . "\nTilgjengelige repoer:\n";
+    foreach ($repos as $key => $repo) {
+        print "- $key : ".$repo['url']." (" . $repo['proto'] . ")\n";
+    }
+    print "\n";
+    print extension_loaded('yaz') 
+        ? 'YAZ er tilgjengelig på denne serveren'
+        : 'Merk: z39.50-repoer kan ikke nås fra denne serveren fordi YAZ ikke er støttet';
     exit(); 
 }
 
 function file_get_contents2($url) {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'UBO Scriptotek Dalek/0.1 (+http://biblionaut.net/bibsys/)');
+//    curl_setopt($ch, CURLOPT_USERAGENT, 'UBO Scriptotek Dalek/0.1 (+http://biblionaut.net/bibsys/)');
     curl_setopt($ch, CURLOPT_HEADER, 0); // no headers in the output
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); // return instead of output
     $data = curl_exec($ch);
     curl_close($ch);
+    if (empty($data)) {
+        print $url;
+        exit();
+    }
     return $data;
 }
 
@@ -118,7 +130,7 @@ $ns = array(
 );
 
 if (!isset($_GET['repo']) || !isset($repos[$_GET['repo']])) {
-    usage();
+    usage($repos);
 }
 $repo = $repos[$_GET['repo']];
 
@@ -137,7 +149,7 @@ if ($repo['ident'] == 'bibsys' && isset($_GET['objektid'])) {
 } else if (isset($_GET['author']) && isset($_GET['title'])) {
     $qs = 'dc.author="' . addslashes($_GET['author']) . '" AND dc.title="' . addslashes($_GET['title']) . '"';
 } else {
-    usage();
+    usage($repos);
 }
 
 $output = array(
@@ -148,9 +160,15 @@ $output = array(
 
 if ($repo['proto'] == 'z39.50') {
 
+    if (!extension_loaded('yaz')) {
+        $output['error'] = 'YAZ extension not loaded';
+        return_json($output);
+    }
+
     $c = yaz_connect($repo['url'], $repo['connection_options']);
     if (!$c) {
-        die('Connection failed');
+        $output['error'] = 'Connection to Z39.50 repo failed';
+        return_json($output);
     }
     yaz_syntax($c, 'marc21');
     $fields = array(
@@ -199,17 +217,25 @@ if ($repo['proto'] == 'z39.50') {
 
     $output['sru_url'] = "$baseurl$qs";
 
-    $xml = new CustomXMLElement($source);
-    $xml->registerXPathNamespaces($ns);
-    $output['numberOfRecords'] = (int)(string)$xml->first('/srw:searchRetrieveResponse/srw:numberOfRecords');
-
-    $diag = $xml->first('//srw:diagnostics');
-    if ($diag !== false) {
-        $output['error'] = strval($diag->el()->diagnostic->message);
+    if (empty($source)) {
+        $output['error'] = "Got a completely empty response! (isn't that bad manner?)";
         return_json($output);
     }
 
+    $xml = new CustomXMLElement($source);
+    $xml->registerXPathNamespaces($ns);
+
+    $diag = $xml->first('//srw:diagnostics');
+    if ($diag !== false) {
+        $output['error'] = strval($diag->el->el->diagnostic->message);
+        return_json($output);
+    }
+
+    $output['numberOfRecords'] = (int)(string)$xml->first('/srw:searchRetrieveResponse/srw:numberOfRecords');
+
     foreach ($xml->xpath("/srw:searchRetrieveResponse/srw:records/srw:record") as $record) {
+
+
 
         $rec_srw = $record->children($ns['srw']);
         $output['recordid'] = (string)$rec_srw->recordIdentifier;
