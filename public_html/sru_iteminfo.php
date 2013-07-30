@@ -171,10 +171,18 @@ $ns = array(
     'd' => 'http://www.loc.gov/zing/srw/diagnostic/'
 );
 
-if (!isset($_GET['repo']) || !isset($repos[$_GET['repo']])) {
-    usage($repos);
+if (!isset($_GET['repo'])) {
+    if (isset($_GET['objektid']) || isset($_GET['dokid'])) {
+        $repo = $repos['bibsys'];
+    } else {
+        usage($repos);
+    }
+} else if (!isset($repos[$_GET['repo']])) {
+    usage($repos);    
+} else {
+    $repo = $repos[$_GET['repo']];
 }
-$repo = $repos[$_GET['repo']];
+
 
 if (isset($_GET['isbn'])) {
     $isbn = array($_GET['isbn']);
