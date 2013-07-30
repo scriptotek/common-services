@@ -64,6 +64,43 @@ function return_json($obj) {
     }
 }
 
+function genchksum13($i){                     // function c, $i is the input
+
+    for($a=$s=0;$a<12;)             // for loop x12 - both $a and $s equal 0
+                                    // notice there is no incrementation and
+                                    // no curly braces as there is just one
+                                    // command to loop through
+
+        $s+=$i[$a]*($a++%2?3:1);    // $s (sum) is being incremented by
+                                    // $ath character of $i (auto-casted to
+                                    // int) multiplied by 3 or 1, depending
+                                    // wheter $a is even or not (%2 results
+                                    // either 1 or 0, but 0 == FALSE)
+                                    // $a is incremented here, using the
+                                    // post-incrementation - which means that
+                                    // it is incremented, but AFTER the value
+                                    // is returned
+
+    return$i.(10-$s%10)%10;         // returns $i with the check digit
+                                    // attached - first it is %'d by 10,
+                                    // then the result is subtracted from
+                                    // 10 and finally %'d by 10 again (which
+                                    // effectively just replaces 10 with 0)
+                                    // % has higher priority than -, so there
+                                    // are no parentheses around $s%10
+}
+
+function isbn10_to_13($isbn) {
+    $isbn = trim($isbn);
+    if(strlen($isbn) == 12){ // if number is UPC just add zero
+        $isbn13 = '0'.$isbn;
+    } else {
+        $isbn2 = substr("978" . trim($isbn), 0, -1);
+        $isbn13 = genchksum13($isbn2);
+    }
+    return ($isbn13);  
+}
+
 $repos = array(
     'loc' => array(
         'proto' => 'sru',
@@ -89,7 +126,8 @@ $repos = array(
     'bl' => array(
         'proto' => 'z39.50',
         'ident' => 'bl',
-        'url' => 'z3950cat.bl.uk:9909/ZBLACU', 
+        'url' => 'z3950cat.bl.uk:9909/ZBLACU',
+        'schema' => 'marc21',
         'connection_options' => array(
             'user' => 'UNOSSL2405',
             'password' => 'M1TZaKK!',
@@ -101,6 +139,7 @@ $repos = array(
         'proto' => 'z39.50',
         'ident' => 'libis',
         'url' => 'opac.libis.be:9991/opac01',
+        'schema' => 'marc21',
         'connection_options' => array(),
         'permalink' => ''
     ),
@@ -108,6 +147,7 @@ $repos = array(
         'proto' => 'z39.50',
         'ident' => 'kb',
         'url' => 'z3950.kb.dk:2100/kgl01',
+        'schema' => 'marc21',
         'connection_options' => array(),
         'permalink' => ''
     ),
@@ -115,6 +155,7 @@ $repos = array(
         'proto' => 'z39.50',
         'ident' => 'kth',
         'url' => 'innopac.lib.kth.se:210/innopac',
+        'schema' => 'marc21',
         'connection_options' => array(),
         'permalink' => '' /* Unlike the case with the British Library Primo installation, 
                              the KTH Primo installation links to single records using an 
@@ -126,7 +167,8 @@ $repos = array(
 
 $ns = array(
     'srw' => 'http://www.loc.gov/zing/srw/',
-    'marc' => 'http://www.loc.gov/MARC21/slim'
+    'marc' => 'http://www.loc.gov/MARC21/slim',
+    'd' => 'http://www.loc.gov/zing/srw/diagnostic/'
 );
 
 if (!isset($_GET['repo']) || !isset($repos[$_GET['repo']])) {
@@ -134,18 +176,36 @@ if (!isset($_GET['repo']) || !isset($repos[$_GET['repo']])) {
 }
 $repo = $repos[$_GET['repo']];
 
+if (isset($_GET['isbn'])) {
+    $isbn = array($_GET['isbn']);
+    if (strlen($isbn[0]) == 10) {
+        $isbn[] = isbn10_to_13($isbn[0]);
+    }
+}
+
+if (isset($_GET['author']) && isset($_GET['title'])) {
+    if (empty($_GET['author'])) {
+        return_json(array('error' => 'Ingen forfatter angitt'));
+    }
+    if (empty($_GET['title'])) {
+        return_json(array('error' => 'Ingen tittel angitt'));
+    }
+}
+
 if ($repo['ident'] == 'bibsys' && isset($_GET['objektid'])) {
     $qs = 'bs.objektid="' . addslashes($_GET['objektid']) . '"';
 } else if ($repo['ident'] == 'bibsys' && isset($_GET['dokid'])) {
     $qs = 'bs.dokid="' . addslashes($_GET['dokid']) . '"';
 } else if ($repo['ident'] == 'bibsys' && isset($_GET['isbn'])) {
-    $qs = 'bs.isbn="' . addslashes($_GET['isbn']) . '"';
+    $qs = implode(' OR ', array_map(function($nr) { return 'bs.isbn="' . $nr . '"'; }, $isbn));
+
 } else if ($repo['proto'] == 'z39.50' && isset($_GET['isbn'])) {
     $qs = 'isbn="' . addslashes($_GET['isbn']) . '"';
 } else if ($repo['proto'] == 'z39.50' && isset($_GET['author']) && isset($_GET['title'])) {
     $qs = 'au="' . addslashes($_GET['author']) . '" and ti="' . addslashes($_GET['title']) . '"';
+
 } else if (isset($_GET['isbn'])) {
-    $qs = 'bath.isbn="' . addslashes($_GET['isbn']) . '"';
+    $qs = implode(' OR ', array_map(function($nr) { return 'bath.isbn="' . $nr . '"'; }, $isbn));
 } else if (isset($_GET['author']) && isset($_GET['title'])) {
     $qs = 'dc.author="' . addslashes($_GET['author']) . '" AND dc.title="' . addslashes($_GET['title']) . '"';
 } else {
@@ -158,57 +218,64 @@ $output = array(
     'klass' => array()
 );
 
-if ($repo['proto'] == 'z39.50') {
+function z3950lookup($repo, $qs, $ns, $output) {
 
     if (!extension_loaded('yaz')) {
         $output['error'] = 'YAZ extension not loaded';
-        return_json($output);
+        return $output;
     }
 
     $c = yaz_connect($repo['url'], $repo['connection_options']);
     if (!$c) {
         $output['error'] = 'Connection to Z39.50 repo failed';
-        return_json($output);
+        return $output;
     }
-    yaz_syntax($c, 'marc21');
+    yaz_syntax($c, $repo['schema']);
     $fields = array(
-        "ti"   => "1=4",   # Title
-        "au"   => "1=1",   # Personal Name
-        "isbn" => "1=7"    # ISBn
+        'ti'   => '1=4',   # Title
+        'au'   => '1=1',   # Personal Name
+        'isbn' => '1=7'    # ISBn
     );
     yaz_ccl_conf($c, $fields);
 
     if (!yaz_ccl_parse($c, $qs, $cclresult)) {
-        die('ccl: ' . $cclresult);
+        $output['error'] = 'Failed to parse CCL: ' . $cclresult;
+        return $output;
     }
     $rpn = $cclresult['rpn'];
     yaz_search($c, 'rpn', $rpn);
     yaz_wait();
     $error = yaz_error($c);
     if (!empty($error)) {
-        return_json(array('error' => $error, 'rpn' => $rpn, 'ccl' => $qs));
+        $output['error'] = $error;
+        $output['rpn'] = $rpn;
+        $output['ccl'] = $qs;
+        return $output;
     }
     $hits = yaz_hits($c);
     if ($hits == 0) {
-        return_json(array('error' => 'no hits'));
+        $output['error'] = 'no hits';
+        return $output;
     }
 
     $output['numberOfRecords'] = $hits;
 
     for ($i = 1; $i <= $hits; $i++) {
-        $rec = '<records>' . yaz_record($c, $i, "xml; charset=marc-8,utf-8") . '</records>';
+        $rec = '<records>' . yaz_record($c, $i, 'xml; charset=marc-8,utf-8') . '</records>';
 
         $output['raw'] = $rec;
 
         $xml = new CustomXMLElement($rec);
         $xml->registerXPathNamespaces($ns);
 
-        foreach ($xml->xpath("marc:record") as $record) {
+        foreach ($xml->xpath('marc:record') as $record) {
             marc_parser($record, $output);
         }
     }
+    return $output;
+}
 
-} else {
+function srulookup($repo, $qs, $ns, $output) {
     $qs = make_query($qs, 1, 1, $repo['schema']);
     $baseurl = $repo['url'];
 
@@ -218,24 +285,22 @@ if ($repo['proto'] == 'z39.50') {
     $output['sru_url'] = "$baseurl$qs";
 
     if (empty($source)) {
-        $output['error'] = "Got a completely empty response! (isn't that bad manner?)";
+        $output['error'] = "Got a completely empty response! Probably a connection problem";
         return_json($output);
     }
 
     $xml = new CustomXMLElement($source);
     $xml->registerXPathNamespaces($ns);
 
-    $diag = $xml->first('//srw:diagnostics');
+    $diag = $xml->first('/srw:searchRetrieveResponse/srw:diagnostics');
     if ($diag !== false) {
-        $output['error'] = strval($diag->el->el->diagnostic->message);
+        $output['error'] = $diag->text('d:diagnostic/d:message');
         return_json($output);
     }
 
-    $output['numberOfRecords'] = (int)(string)$xml->first('/srw:searchRetrieveResponse/srw:numberOfRecords');
+    $output['numberOfRecords'] = (int)$xml->text('/srw:searchRetrieveResponse/srw:numberOfRecords');
 
     foreach ($xml->xpath("/srw:searchRetrieveResponse/srw:records/srw:record") as $record) {
-
-
 
         $rec_srw = $record->children($ns['srw']);
         $output['recordid'] = (string)$rec_srw->recordIdentifier;
@@ -257,6 +322,18 @@ if ($repo['proto'] == 'z39.50') {
         marc_parser($marc_rec, $output);
 
     }
+    return $output;
+}
+
+
+if ($repo['proto'] == 'z39.50') {
+
+    $output = z3950lookup($repo, $qs, $ns, $output);
+
+} else {
+
+    $output = srulookup($repo, $qs, $ns, $output);
+
 }
 if ($repo['ident'] == 'loc' && isset($output['lccn'])) {
     $output['recordid'] = $output['lccn'];
