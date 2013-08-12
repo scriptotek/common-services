@@ -310,8 +310,7 @@ function srulookup($repo, $qs, $ns, $output) {
 
     foreach ($xml->xpath("/srw:searchRetrieveResponse/srw:records/srw:record") as $record) {
 
-        $rec_srw = $record->children($ns['srw']);
-        $output['recordid'] = (string)$rec_srw->recordIdentifier;
+        $output['recordid'] = $record->text('srw:recordIdentifier');
         $output['subjects'] = array();
         $output['dewey'] = '';
 
