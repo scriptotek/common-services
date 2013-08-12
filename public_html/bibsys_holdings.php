@@ -68,7 +68,8 @@ $repos = array(
 
 $ns = array(
     'srw' => 'http://www.loc.gov/zing/srw/',
-    'marc' => 'info:lc/xmlns/marcxchange-v1'
+    'marc' => 'info:lc/xmlns/marcxchange-v1',
+    'd' => 'http://www.loc.gov/zing/srw/diagnostic/'
 );
 
 $repo = $repos['bibsys'];
@@ -83,7 +84,7 @@ if ($repo['ident'] == 'bibsys' && isset($_GET['objektid'])) {
     usage();
 }
 
-$output = array();
+$output = array('holdings' => array());
 
 $qs = make_query($qs, 1, 1, $repo['schema']);
 $baseurl = $repo['url'];
@@ -93,40 +94,41 @@ $output['sru_url'] = "$baseurl$qs";
 
 $xml = new CustomXMLElement($source);
 $xml->registerXPathNamespaces($ns);
-$output['numberOfRecords'] = (int)(string)$xml->first('/srw:searchRetrieveResponse/srw:numberOfRecords');
+$output['numberOfRecords'] = (int)$xml->text('/srw:searchRetrieveResponse/srw:numberOfRecords');
 
-$diag = $xml->first('//srw:diagnostics');
+$diag = $xml->first('/srw:searchRetrieveResponse/srw:diagnostics');
 if ($diag !== false) {
-    $output['error'] = strval($diag->el()->diagnostic->message);
+    $output['error'] = $diag->text('d:diagnostic/d:message');
     return_json($output);
 }
 
+if ($output['numberOfRecords'] > 0) {
 
-$record = $xml->first("/srw:searchRetrieveResponse/srw:records/srw:record");
+    $record = $xml->first("/srw:searchRetrieveResponse/srw:records/srw:record/srw:recordData/metadata/marc:collection");
+    $biblio = $record->first('marc:record[@type="Bibliographic"]');
 
-$rec_srw = $record->children($ns['srw']);
-$output['recordid'] = (string)$rec_srw->recordIdentifier;
-$output['keywords'] = array();
-$output['dewey'] = '';
+    // Id (objektid)
+    $output['recordid'] = $biblio->text('marc:controlfield[@tag="001"]');
+    $output['keywords'] = array();
+    $output['dewey'] = '';
 
-$v = $record->first('srw:recordData/marc:record/marc:datafield[@tag="082"][@ind1="0"]/marc:subfield[@code="a"]');
-if ($v !== false) {
-    $output['dewey'] = str_replace('/', '', (string)$v);
+    $v = $biblio->first('marc:datafield[@tag="082"]/marc:subfield[@code="a"]');
+    if ($v !== false) {
+        $output['dewey'] = str_replace('/', '', (string)$v);
+    }
+
+    $holdings = array();
+    foreach ($record->xpath('marc:record[@type="Holdings"]') as $node) {
+        $o = array();
+        $o['dokid'] = $node->text('marc:controlfield[@tag="001"]');
+        $o['a'] = $node->text('marc:datafield[@tag="852"]/marc:subfield[@code="a"]');
+        $o['b'] = $node->text('marc:datafield[@tag="852"]/marc:subfield[@code="b"]');
+        $o['c'] = $node->text('marc:datafield[@tag="852"]/marc:subfield[@code="c"]');
+        $holdings[] = $o;
+    }
+
+    $output['holdings'] = $holdings;
 }
-
-$marc_rec = $record->first('srw:recordData/metadata/marc:collection/marc:record[@type="Bibliographic"]');
-
-$holdings = array();
-foreach ($record->xpath('srw:recordData/metadata/marc:collection/marc:record[@type="Holdings"]') as $node) {
-    $o = array();
-    $o['dokid'] = $node->text('marc:controlfield[@tag="001"]');
-    $o['a'] = $node->text('marc:datafield[@tag="852"]/marc:subfield[@code="a"]');
-    $o['b'] = $node->text('marc:datafield[@tag="852"]/marc:subfield[@code="b"]');
-    $o['c'] = $node->text('marc:datafield[@tag="852"]/marc:subfield[@code="c"]');
-    $holdings[] = $o;
-}
-
-$output['holdings'] = $holdings;
 
 return_json($output);
 
