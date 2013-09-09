@@ -42,15 +42,19 @@ $thumb = $dom->getElementById('thumbnail');
 $keys = array(
     'Beskrivelse fra forlaget (kort)' => 'short_desc',
     'Beskrivelse fra forlaget (lang)' => 'long_desc',
+    'Publisher\'s description (brief)' => 'short_desc',
+    'Publisher\'s description (full)' => 'long_desc',
     'Innholdsfortegnelse' => 'toc'
 );
-$json = array();
+$json = array('source' => $url);
 foreach ($h3s as $h3) {
     $title = $h3->nodeValue;
     $div = $h3->nextSibling->nextSibling;
     $body = $div->nodeValue;
     if (!empty($title) && !empty($body)) {
-        $json[$keys[$title]] = $body;
+        if (array_key_exists($title, $keys)) {
+            $json[$keys[$title]] = $body;
+        }
     }
 }
 if ($thumb) {
