@@ -153,6 +153,10 @@ function marc_parser($record, &$output) {
                 $desc = $node->text('marc:subfield[@code="3"]');
                 if (in_array($desc, array('Cover image', 'Omslagsbilde'))) {
                     $output['cover_image'] = $node->text('marc:subfield[@code="u"]');
+
+                    // Silly hack to get larger images from Bibsys:
+                    $output['cover_image'] = str_replace('mini','stor',$output['cover_image']);
+                    $output['cover_image'] = str_replace('LITE','STOR',$output['cover_image']);
                 }
                 if (in_array($desc, array('Beskrivelse fra forlaget (kort)', 'Beskrivelse fra forlaget (lang)'))) {
                     $output['description'] = $node->text('marc:subfield[@code="u"]');
