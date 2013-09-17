@@ -23,7 +23,7 @@ function marc_parser($record, &$output) {
             case 82:
                 if (!isset($output['klass'])) $output['klass'] = array();
                 $klass = $node->text('marc:subfield[@code="a"]');
-                $klass = str_replace('/', '', $klass);
+                $klass = preg_replace('/[0-9.]/', '', $klass);
                 foreach ($output['klass'] as $kitem) {
                     if (($kitem['kode'] == $klass) && ($kitem['system'] == 'dewey')) {
                         continue 3;
@@ -34,6 +34,7 @@ function marc_parser($record, &$output) {
             case 89:
                 if (!isset($output['klass'])) $output['klass'] = array();
                 $klass = $node->text('marc:subfield[@code="a"]');
+                $klass = preg_replace('/[0-9.]/', '', $klass);
                 foreach ($output['klass'] as $kitem) {
                     if (($kitem['kode'] == $klass) && ($kitem['system'] == 'dewey')) {
                         continue 3;
