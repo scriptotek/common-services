@@ -67,11 +67,12 @@ function marc_parser($record, &$output) {
             case 300:
                 $output['pages'] = $node->text('marc:subfield[@code="a"]');
                 break;
+            case 490:
             case 491:
                 $output['series'] = array();
-                $output['series']['title'] = $node->text('subfield[@code="a"]');
-                $output['series']['objectid'] = $node->text('subfield[@code="n"]');
-                $output['series']['volume'] = $node->text('subfield[@code="v"]');
+                $output['series']['title'] = $node->text('marc:subfield[@code="a"]');
+                $output['series']['objectid'] = $node->text('marc:subfield[@code="n"]');
+                $output['series']['volume'] = $node->text('marc:subfield[@code="v"]');
                 break;
 
             case 505:
