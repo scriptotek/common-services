@@ -23,7 +23,7 @@ function marc_parser($record, &$output) {
             case 82:
                 if (!isset($output['klass'])) $output['klass'] = array();
                 $klass = $node->text('marc:subfield[@code="a"]');
-                $klass = str_replace('/', '', $klass);
+                $klass = preg_replace('/[^0-9.]/', '', $klass);
                 foreach ($output['klass'] as $kitem) {
                     if (($kitem['kode'] == $klass) && ($kitem['system'] == 'dewey')) {
                         continue 3;
@@ -34,6 +34,7 @@ function marc_parser($record, &$output) {
             case 89:
                 if (!isset($output['klass'])) $output['klass'] = array();
                 $klass = $node->text('marc:subfield[@code="a"]');
+                $klass = preg_replace('/[^0-9.]/', '', $klass);
                 foreach ($output['klass'] as $kitem) {
                     if (($kitem['kode'] == $klass) && ($kitem['system'] == 'dewey')) {
                         continue 3;
@@ -67,11 +68,12 @@ function marc_parser($record, &$output) {
             case 300:
                 $output['pages'] = $node->text('marc:subfield[@code="a"]');
                 break;
+            case 490:
             case 491:
                 $output['series'] = array();
-                $output['series']['title'] = $node->text('subfield[@code="a"]');
-                $output['series']['objectid'] = $node->text('subfield[@code="n"]');
-                $output['series']['volume'] = $node->text('subfield[@code="v"]');
+                $output['series']['title'] = $node->text('marc:subfield[@code="a"]');
+                $output['series']['objectid'] = $node->text('marc:subfield[@code="n"]');
+                $output['series']['volume'] = $node->text('marc:subfield[@code="v"]');
                 break;
 
             case 505:
@@ -151,6 +153,10 @@ function marc_parser($record, &$output) {
                 $desc = $node->text('marc:subfield[@code="3"]');
                 if (in_array($desc, array('Cover image', 'Omslagsbilde'))) {
                     $output['cover_image'] = $node->text('marc:subfield[@code="u"]');
+
+                    // Silly hack to get larger images from Bibsys:
+                    $output['cover_image'] = str_replace('mini','stor',$output['cover_image']);
+                    $output['cover_image'] = str_replace('LITE','STOR',$output['cover_image']);
                 }
                 if (in_array($desc, array('Beskrivelse fra forlaget (kort)', 'Beskrivelse fra forlaget (lang)'))) {
                     $output['description'] = $node->text('marc:subfield[@code="u"]');
