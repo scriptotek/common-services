@@ -3,7 +3,7 @@
 ini_set('display_errors', 'On');
 error_reporting(E_ALL);
 
-require_once('vendor/amstaff/simplehtmldom/lib/SimpleHtmlDom/SimpleHtmlDom.php'); # SimpleHtmlDom is not PSR-0
+require_once('../vendor/amstaff/simplehtmldom/lib/SimpleHtmlDom/SimpleHtmlDom.php'); # SimpleHtmlDom is not PSR-0
 
 header('Content-Type: application/json; charset=utf-8');
 

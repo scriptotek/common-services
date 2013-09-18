@@ -1,0 +1,10 @@
+{
+    "name": "scriptotek/services",
+    "description": "Collection of web services",
+    "license": "MIT",
+    "minimum-stability": "dev",
+    "require": {
+        "amstaff/simplehtmldom": "dev-master"
+    }
+}
+
