@@ -4,7 +4,8 @@
     "license": "MIT",
     "minimum-stability": "dev",
     "require": {
-        "amstaff/simplehtmldom": "dev-master"
+        "amstaff/simplehtmldom": "dev-master",
+        "danmichaelo/quitesimplexmlelement": "dev-master"
     }
 }
 
