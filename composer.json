@@ -5,7 +5,8 @@
     "minimum-stability": "dev",
     "require": {
         "amstaff/simplehtmldom": "dev-master",
-        "danmichaelo/quitesimplexmlelement": "dev-master"
+        "danmichaelo/quitesimplexmlelement": "dev-master",
+        "easyrdf/easyrdf": "dev-master"
     }
 }
 
