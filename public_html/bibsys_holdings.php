@@ -3,8 +3,10 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
+require_once('../vendor/autoload.php');
 require_once('../marcparser.php');
-require_once('../customxmlelement/customxmlelement.php');
+
+use Danmichaelo\QuiteSimpleXMLElement\QuiteSimpleXMLElement;
 
 function usage() {
     header('Content-type: text/plain;charset=UTF-8');
@@ -92,7 +94,7 @@ $source = file_get_contents2("$baseurl$qs");
 
 $output['sru_url'] = "$baseurl$qs";
 
-$xml = new CustomXMLElement($source);
+$xml = new QuiteSimpleXMLElement($source);
 $xml->registerXPathNamespaces($ns);
 $output['numberOfRecords'] = (int)$xml->text('/srw:searchRetrieveResponse/srw:numberOfRecords');
 

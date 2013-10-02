@@ -5,12 +5,25 @@ error_reporting(E_ALL);
 
 require_once('../vendor/amstaff/simplehtmldom/lib/SimpleHtmlDom/SimpleHtmlDom.php'); # SimpleHtmlDom is not PSR-0
 
-header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
 
 function usage() {
 	print "Bruk: \n\n    " . $_SERVER['PHP_SELF'] ."?number=<number>\n\nder <number> er et 8-sifret norsk telefonnummer. Eksempel:\n\n    " . $_SERVER['PHP_SELF'] ."?number=99887766";
-	exit();	
+	exit();
 }
+
+function return_json($obj) {
+    if (isset($_REQUEST['callback'])) {
+        header('Content-type: application/javascript; charset=utf-8');
+        echo $_REQUEST['callback'] . '(' . json_encode($obj) . ')';
+        exit();
+    } else {
+        header('Content-type: application/json; charset=utf-8');
+        echo json_encode($obj);
+        exit();
+    }
+}
+
 
 if (!isset($_GET['number'])) usage();
 
@@ -55,7 +68,9 @@ foreach ($urls as $url) {
 
 
 if (empty($personname)) {
-    echo json_encode(array('number' => $number, 'personname' => 'unknown', 'source' => $source));
+    $res = array('number' => $number, 'personname' => 'unknown', 'source' => $source);
 } else {
-    echo json_encode(array('number' => $number, 'personname' => $personname, 'source' => $source));
+    $res = array('number' => $number, 'personname' => $personname, 'source' => $source);
 }
+
+return_json($res);

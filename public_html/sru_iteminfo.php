@@ -3,8 +3,9 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
+require_once('../vendor/autoload.php');
 require_once('../marcparser.php');
-require_once('../customxmlelement/customxmlelement.php');
+use Danmichaelo\QuiteSimpleXMLElement\QuiteSimpleXMLElement;
 
 function usage($repos) {
     header('Content-type: text/plain;charset=UTF-8');
@@ -273,7 +274,7 @@ function z3950lookup($repo, $qs, $ns, $output) {
 
         $output['raw'] = $rec;
 
-        $xml = new CustomXMLElement($rec);
+        $xml = new QuiteSimpleXMLElement($rec);
         $xml->registerXPathNamespaces($ns);
 
         foreach ($xml->xpath('marc:record') as $record) {
@@ -297,7 +298,7 @@ function srulookup($repo, $qs, $ns, $output) {
         return_json($output);
     }
 
-    $xml = new CustomXMLElement($source);
+    $xml = new QuiteSimpleXMLElement($source);
     $xml->registerXPathNamespaces($ns);
 
     $diag = $xml->first('/srw:searchRetrieveResponse/srw:diagnostics');

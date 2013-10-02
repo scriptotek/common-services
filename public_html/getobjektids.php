@@ -3,7 +3,9 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
-require_once('../customxmlelement/customxmlelement.php');
+require_once('../vendor/autoload.php');
+
+use Danmichaelo\QuiteSimpleXMLElement\QuiteSimpleXMLElement;
 
 function usage() {
     header('Content-type: text/plain; charset=utf-8');
@@ -79,7 +81,7 @@ $json = array('isbn' => $isbn);
 
 //print $source;
 
-$xml = new CustomXmlElement($source);
+$xml = new QuiteSimpleXMLElement($source);
 $xml->registerXPathNamespaces(array(
     'srw' => 'http://www.loc.gov/zing/srw/',
     'marc' => 'http://www.loc.gov/MARC21/slim',
