@@ -4,6 +4,7 @@ function marc_parser($record, &$output) {
 
     $output['control_number'] = $record->text('marc:controlfield[@tag="001"]');
     $output['authors'] = array();
+    $output['subjects'] = array();
     $output['electronic'] = false;
 
     foreach ($record->xpath('marc:datafield') as $node) {
@@ -106,7 +107,7 @@ function marc_parser($record, &$output) {
 
                   $subdiv = $node->text('marc:subfield[@code="x"]');
                   if ($subdiv !== false) $tmp['subdiv'] = trim($subdiv, '.');
-                  
+
                   $time = $node->text('marc:subfield[@code="y"]');
                   if ($time !== false) $tmp['time'] = $time;
 
