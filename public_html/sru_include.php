@@ -75,6 +75,20 @@ $repos = array(
         'schema' => 'marcxchange',
         'permalink' => 'http://ask.bibsys.no/ask/action/show?kid=biblio&pid='
     ),
+    'bnf' => array(
+        'proto' => 'sru',
+        'ident' => 'bnf',
+        'url' => 'http://z3950.loc.gov:7090/voyager?',
+        'schema' => 'marcxml',
+        'permalink' => ''
+    ),
+    'dnb' => array(
+        'proto' => 'sru',
+        'ident' => 'dnb',
+        'url' => 'http://services.dnb.de/sru/dnb?',
+        'schema' => 'MARC21-xml',
+        'permalink' => ''
+    ),
     'bl' => array(
         'proto' => 'z39.50',
         'ident' => 'bl',
@@ -128,6 +142,7 @@ function srulookup($repo, $qs, $ns, $output) {
     $baseurl = $repo['url'];
 
     //print "$baseurl$qs";
+    die("$baseurl$qs");
     $source = file_get_contents2("$baseurl$qs");
 
     $output['sru_url'] = "$baseurl$qs";

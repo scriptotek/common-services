@@ -29,7 +29,7 @@ function return_json($obj) {
 
 function lookup_id($id) {
 
-    $url = 'http://adminwebservices.bibsys.no/objectIdService/getObjectId?id=' . $id;
+    //$url = 'http://adminwebservices.bibsys.no/objectIdService/getObjectId?id=' . $id;
     $url = 'http://adminwebservices.bibsys.no/objectIdService/getIds?id=' . $id;
 
     $ids = trim(file_get_contents2($url));

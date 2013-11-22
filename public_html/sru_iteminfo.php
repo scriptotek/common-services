@@ -72,6 +72,8 @@ if ($repo['ident'] == 'bibsys' && isset($_GET['id'])) {
     $qs = 'bs.dokid="' . addslashes($_GET['dokid']) . '"';
 } else if ($repo['ident'] == 'bibsys' && isset($_GET['isbn'])) {
     $qs = implode(' OR ', array_map(function($nr) { return 'bs.isbn="' . $nr . '"'; }, $isbn));
+} else if ($repo['ident'] == 'dnb' && isset($_GET['isbn'])) {
+    $qs = implode(' OR ', array_map(function($nr) { return 'dnb.isbn="' . $nr . '"'; }, $isbn));
 
 } else if ($repo['proto'] == 'z39.50' && isset($_GET['isbn'])) {
     $qs = 'isbn="' . addslashes($_GET['isbn']) . '"';
