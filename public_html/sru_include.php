@@ -1,8 +1,8 @@
 <?php
 
 require_once('../vendor/autoload.php');
-require_once('../marcparser.php');
-use Danmichaelo\QuiteSimpleXMLElement\QuiteSimpleXMLElement;
+use Danmichaelo\QuiteSimpleXMLElement\QuiteSimpleXMLElement,
+    Danmichaelo\SimpleMarcParser\BibliographicParser;
 
 
 function make_query($cql, $start = 1, $count = 1, $schema = 'marcxml') {
@@ -142,7 +142,7 @@ function srulookup($repo, $qs, $ns, $output) {
     $baseurl = $repo['url'];
 
     //print "$baseurl$qs";
-    die("$baseurl$qs");
+    //die("$baseurl$qs");
     $source = file_get_contents2("$baseurl$qs");
 
     $output['sru_url'] = "$baseurl$qs";
@@ -163,6 +163,8 @@ function srulookup($repo, $qs, $ns, $output) {
 
     $output['numberOfRecords'] = (int)$xml->text('/srw:searchRetrieveResponse/srw:numberOfRecords');
 
+    $parser = new BibliographicParser;
+
     foreach ($xml->xpath("/srw:searchRetrieveResponse/srw:records/srw:record") as $record) {
 
         $output['recordid'] = $record->text('srw:recordIdentifier');
@@ -179,9 +181,11 @@ function srulookup($repo, $qs, $ns, $output) {
             }
         }
 
-        $marc_rec = $record->first('srw:recordData/marc:record');
+        foreach ($parser->parse($record->first('srw:recordData/marc:record')) as $key => $val) {
+            $output[$key] = $val;
+        }
 
-        marc_parser($marc_rec, $output);
+        //marc_parser($marc_rec, $output);
 
     }
     return $output;
