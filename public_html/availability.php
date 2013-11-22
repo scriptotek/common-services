@@ -9,10 +9,11 @@ function usage() {
 }
 
 if (!isset($_GET['id'])) usage();
-$id = preg_replace('/[^0-9x]/i', '', $_GET['id']);
+$id = $_GET['id'];
 if (empty($id)) usage();
 
-$url = 'http://services.bibsys.no/services/json/availabilityService.jsp?id=' . $id . '&ts=' . time();
+$ids = lookup_id($id);
+$url = 'http://services.bibsys.no/services/json/availabilityService.jsp?id=' . $ids['objektid'] . '&ts=' . time();
 //$url = 'http://alfa-a.bibsys.no/services/json/availabilityService.jsp?id=' . $id;
 $data = file_get_contents2($url);
 
