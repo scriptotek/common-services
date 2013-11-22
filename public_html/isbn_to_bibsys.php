@@ -1,6 +1,5 @@
 <?php
 
-require_once('../marcparser.php');
 require_once('common.php');
 require_once('sru_include.php');
 
