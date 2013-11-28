@@ -57,10 +57,7 @@ if (isset($_GET['author']) && isset($_GET['title'])) {
     }
 }
 
-$output = array(
-    'subjects' => array(),
-    'klass' => array()
-);
+$output = array();
 
 if ($repo['ident'] == 'bibsys' && isset($_GET['id'])) {
     $ids = lookup_id($_GET['id']);
@@ -92,11 +89,11 @@ $output['permalink'] = $repo['permalink'];
 
 if ($repo['proto'] == 'z39.50') {
 
-    $output = z3950lookup($repo, $qs, $ns, $output);
+    $output = array_merge($output, z3950lookup($repo, $qs, $ns));
 
 } else {
 
-    $output = srulookup($repo, $qs, $ns, $output);
+    $output = array_merge($output, srulookup($repo, $qs, $ns));
 
 }
 if ($repo['ident'] == 'loc' && isset($output['lccn'])) {

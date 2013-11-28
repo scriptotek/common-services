@@ -1,20 +1,10 @@
 <?php
 
 require_once('../vendor/autoload.php');
+
 use Danmichaelo\QuiteSimpleXMLElement\QuiteSimpleXMLElement,
     Danmichaelo\SimpleMarcParser\BibliographicParser;
 
-
-function make_query($cql, $start = 1, $count = 1, $schema = 'marcxml') {
-    return http_build_query(array(
-        'version' => '1.1',
-        'operation' => 'searchRetrieve',
-        'recordSchema' => $schema, // "bibsysmarc" (ikke offisielt støttet) eller "marcxchange"
-        //'startRecord' =>  $start,
-        'maximumRecords' => $count,
-        'query' => $cql
-        ));
-}
 
 function genchksum13($i){                     // function c, $i is the input
 
@@ -81,6 +71,7 @@ $repos = array(
         'url' => 'http://z3950.loc.gov:7090/voyager?',
         'schema' => 'marcxml',
         'permalink' => ''
+        // BNF ser ut til å gi "Permanent system error" ved 'bath.isbn="isbn1" OR bath.isbn="isbn2"'.. merkelig
     ),
     'dnb' => array(
         'proto' => 'sru',
@@ -137,62 +128,140 @@ $ns = array(
     'd' => 'http://www.loc.gov/zing/srw/diagnostic/'
 );
 
-function srulookup($repo, $qs, $ns, $output) {
-    $qs = make_query($qs, 1, 1, $repo['schema']);
-    $baseurl = $repo['url'];
+class SRUClient {
 
-    //print "$baseurl$qs";
-    //die("$baseurl$qs");
-    $source = file_get_contents2("$baseurl$qs");
+    public function __construct($url, $options)
+    {
+        $this->url = $url;
 
-    $output['sru_url'] = "$baseurl$qs";
+        $this->schema = isset($options['schema'])
+            ? $options['schema']
+            : 'marcxml';
 
-    if (empty($source)) {
-        $output['error'] = "Got a completely empty response! Probably a connection problem";
-        return_json($output);
+        $this->namespaces = isset($options['namespaces'])
+            ? $options['namespaces']
+            : array(
+                'srw' => 'http://www.loc.gov/zing/srw/',
+                'marc' => 'http://www.loc.gov/MARC21/slim',
+                'd' => 'http://www.loc.gov/zing/srw/diagnostic/'
+            );
+
+        $this->version = isset($options['version'])
+            ? $options['version']
+            : '1.1';
+
     }
 
-    $xml = new QuiteSimpleXMLElement($source);
-    $xml->registerXPathNamespaces($ns);
+    /**
+     * Returns: QuiteSimpleXMLElement
+     */
+    private function query($query) {
+        $this->last_url = $this->url . http_build_query($query);
+        $response = file_get_contents2($this->last_url);
 
-    $diag = $xml->first('/srw:searchRetrieveResponse/srw:diagnostics');
-    if ($diag !== false) {
-        $output['error'] = $diag->text('d:diagnostic/d:message');
-        return_json($output);
+        if (empty($response)) {
+            $this->error = 'empty_response';
+            return null;
+            // Got a completely empty response! Probably a connection problem
+        }
+
+        $xml = new QuiteSimpleXMLElement($response);
+        $xml->registerXPathNamespaces($this->namespaces);
+        return $xml;
     }
 
-    $output['numberOfRecords'] = (int)$xml->text('/srw:searchRetrieveResponse/srw:numberOfRecords');
+    /**
+     * Carries out a srw:searchRetrieveResponse
+     */
+    public function search($cql, $start = 1, $count = 10) {
 
-    $parser = new BibliographicParser;
+        $qs = array(
+            'version' => $this->version,
+            'operation' => 'searchRetrieve',
+            'recordSchema' => $this->schema,
+            'maximumRecords' => $count,
+            'query' => $cql
+        );
 
-    foreach ($xml->xpath("/srw:searchRetrieveResponse/srw:records/srw:record") as $record) {
+        if ($start != 1) {
+            $qs['startRecord'] = 1; // BIBSYS SRU (more?) gives more understandable error messages if we don't provide startRecord unless necessary
+        }
 
-        $output['recordid'] = $record->text('srw:recordIdentifier');
-        $output['subjects'] = array();
-        $output['dewey'] = '';
+        $response = $this->query($qs);
 
-        $v = $record->first('srw:recordData/marc:record/marc:datafield[@tag="082"]/marc:subfield[@code="a"]');
-        if ($v !== false) {
-            $output['dewey'] = str_replace('/', '', (string)$v);
-        } else {
-            $v = $record->first('srw:recordData/marc:record/marc:datafield[@tag="089"]/marc:subfield[@code="a"]');
-            if ($v !== false) {
-                $output['dewey'] = str_replace('/', '', (string)$v);
+        if (isset($this->error)) {
+            return array(
+                'error' => $this->error
+            );
+        }
+
+        $diag = $response->first('/srw:searchRetrieveResponse/srw:diagnostics');
+        if ($diag !== false) {
+            return array(
+                'error' => $diag->text('d:diagnostic/d:message')
+            );
+        }
+
+        $output = array(
+            'numberOfRecords' => (int)$response->text('/srw:searchRetrieveResponse/srw:numberOfRecords'),
+            'records' => array()
+        );
+
+        $parser = new BibliographicParser;
+
+        foreach ($response->xpath('/srw:searchRetrieveResponse/srw:records/srw:record') as $record) {
+
+            $output['records'][] = $parser->parse($record->first('srw:recordData/marc:record'));
+
+        }
+
+        return $output;
+
+    }
+
+}
+
+function srulookup($repo, $qs, $ns) {
+
+    $sru = new SRUClient($repo['url'], $repo);
+
+    $response = $sru->search($qs, 1, 1);
+
+    $out = array(
+        'sru_url' => $sru->last_url
+    );
+
+    if (isset($response['records']) && count($response['records']) != 0) {
+
+        $rec = $response['records'][0];
+
+        $out['recordid'] = $rec['id'];
+
+        foreach ($rec as $key => $val) {
+            $out[$key] = $val;
+        }
+
+        foreach ($rec['classifications'] as $cl) {
+            if ($cl['system'] == 'dewey') {
+                $out['dewey'] = $cl['number'];
+                break;
             }
         }
 
-        foreach ($parser->parse($record->first('srw:recordData/marc:record')) as $key => $val) {
-            $output[$key] = $val;
-        }
+        return $out;
 
-        //marc_parser($marc_rec, $output);
+    } else {
 
+        // Add to out
+        return $response;
     }
-    return $output;
+
 }
 
 
-function z3950lookup($repo, $qs, $ns, $output) {
+function z3950lookup($repo, $qs, $ns) {
+
+    $output = array();
 
     if (!extension_loaded('yaz')) {
         $output['error'] = 'YAZ extension not loaded';
