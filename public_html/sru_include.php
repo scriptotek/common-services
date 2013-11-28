@@ -261,7 +261,7 @@ function srulookup($repo, $qs, $ns) {
 
 function z3950lookup($repo, $qs, $ns) {
 
-    $output = array();
+    $output = array('records' => array());
 
     if (!extension_loaded('yaz')) {
         $output['error'] = 'YAZ extension not loaded';
@@ -303,6 +303,8 @@ function z3950lookup($repo, $qs, $ns) {
 
     $output['numberOfRecords'] = $hits;
 
+    $parser = new BibliographicParser;
+
     for ($i = 1; $i <= $hits; $i++) {
         $rec = '<records>' . yaz_record($c, $i, 'xml; charset=marc-8,utf-8') . '</records>';
 
@@ -312,7 +314,7 @@ function z3950lookup($repo, $qs, $ns) {
         $xml->registerXPathNamespaces($ns);
 
         foreach ($xml->xpath('marc:record') as $record) {
-            marc_parser($record, $output);
+            $output['records'][] = $parser->parse($record);
         }
     }
     return $output;
