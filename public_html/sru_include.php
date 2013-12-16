@@ -317,5 +317,31 @@ function z3950lookup($repo, $qs, $ns) {
             $output['records'][] = $parser->parse($record);
         }
     }
-    return $output;
+
+    // -------------------------------------------------
+
+    if (isset($output['records']) && count($output['records']) != 0) {
+
+        $rec = $output['records'][0];
+
+        $out['recordid'] = $rec['id'];
+
+        foreach ($rec as $key => $val) {
+            $out[$key] = $val;
+        }
+
+        foreach ($rec['classifications'] as $cl) {
+            if ($cl['system'] == 'dewey') {
+                $out['dewey'] = $cl['number'];
+                break;
+            }
+        }
+
+        return $out;
+
+    } else {
+
+        // Add to out
+        return $output;
+    }
 }
