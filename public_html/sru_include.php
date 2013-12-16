@@ -47,7 +47,7 @@ $repos = array(
     'loc' => array(
         'proto' => 'sru',
         'ident' => 'loc',
-        'url' => 'http://lx2.loc.gov:210/LCDB?',
+        'url' => 'http://lx2.loc.gov:210/LCDB?', // http://z3950.loc.gov:7090/voyager?
         'schema' => 'marcxml',
         'permalink' => 'http://lccn.loc.gov/'
     ),
@@ -66,12 +66,17 @@ $repos = array(
         'permalink' => 'http://ask.bibsys.no/ask/action/show?kid=biblio&pid='
     ),
     'bnf' => array(
-        'proto' => 'sru',
+        'proto' => 'z39.50',
         'ident' => 'bnf',
-        'url' => 'http://z3950.loc.gov:7090/voyager?',
-        'schema' => 'marcxml',
-        'permalink' => ''
-        // BNF ser ut til å gi "Permanent system error" ved 'bath.isbn="isbn1" OR bath.isbn="isbn2"'.. merkelig
+        'url' => 'z3950.bnf.fr:2211/TOUT-ANA1-UTF8',
+        'schema' => 'UNIMARC',
+        'permalink' => '',
+        'connection_options' => array(
+            'user' => 'Z3950',
+            'password' => 'Z3950_BNF',
+            'charset' => 'UTF-8'
+        ),
+        // http://www.bnf.fr/fr/professionnels/recuperation_donnees_bnf_boite_outils/a.profil_z3950_bnf.html
     ),
     'dnb' => array(
         'proto' => 'sru',
