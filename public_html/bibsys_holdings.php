@@ -4,30 +4,19 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
 require_once('../vendor/autoload.php');
+require_once('common.php');
 
 use Danmichaelo\QuiteSimpleXMLElement\QuiteSimpleXMLElement;
+use Danmichaelo\SimpleMarcParser\HoldingsParser;
 
 function usage() {
     header('Content-type: text/plain;charset=UTF-8');
     print "Bruk: \n\n"
-        . "    " . $_SERVER['PHP_SELF'] ."?objektid=<number>\n\n"
-        . "    " . $_SERVER['PHP_SELF'] ."?dokid=<dokid>\n\n"
-        . "    " . $_SERVER['PHP_SELF'] ."?isbn=<isbn>&repo=<repo>\n\n"
-        . " der <objektid> eller <dokid> er et gyldig objektid eller dokid. <repo> kan ha en av verdiene 'bibsys', 'loc', 'libris' eller 'bl'."
-        . "Eksempel:\n\n    " . $_SERVER['PHP_SELF'] ."?objektid=052073475\n\n"
+        . "    " . $_SERVER['PHP_SELF'] ."?id=<number>\n\n"
+        . " der <id> er et gyldig objektid, dokid eller isbn. Alternativt kan du angi ?objektid=, ?dokid= eller ?isbn= for å spesifisere."
+        . "Eksempel:\n\n    " . $_SERVER['PHP_SELF'] ."?id=052073475\n\n"
         . "For å få resultatene i JSONP istedetfor JSON; bruk callback. Eksempel:\n\n    " . $_SERVER['PHP_SELF'] ."?objektid=052073475&callback=minfunksjon\n";
     exit(); 
-}
-
-function file_get_contents2($url) {
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'UBO Scriptotek Dalek/0.1 (+http://biblionaut.net/bibsys/)');
-    curl_setopt($ch, CURLOPT_HEADER, 0); // no headers in the output
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); // return instead of output
-    $data = curl_exec($ch);
-    curl_close($ch);
-    return $data;
 }
 
 function make_query($cql, $start = 1, $count = 1, $schema = 'marcxml') {
@@ -39,22 +28,6 @@ function make_query($cql, $start = 1, $count = 1, $schema = 'marcxml') {
         'maximumRecords' => $count,
         'query' => $cql
         ));
-}
-
-function return_json($obj) {
-    if (isset($_REQUEST['callback'])) {
-        header('Content-type: application/javascript; charset=utf-8');
-        echo $_REQUEST['callback'] . '(' . json_encode($obj) . ')';
-        exit();
-    } else {
-        header('Content-type: application/json; charset=utf-8');
-        if (version_compare(PHP_VERSION, '5.4.0') >= 0) {
-            echo json_encode($obj, JSON_PRETTY_PRINT);
-        } else {
-            echo json_encode($obj);            
-        }
-        exit();
-    }
 }
 
 $repos = array(
@@ -75,11 +48,18 @@ $ns = array(
 
 $repo = $repos['bibsys'];
 
-if ($repo['ident'] == 'bibsys' && isset($_GET['objektid'])) {
+if (isset($_GET['id'])) {
+    if (is_isbn($_GET['id'])) {
+        $qs = 'bs.isbn="' . addslashes($_GET['id']) . '"';
+    } else {
+        $ids = lookup_id($_GET['id']);
+        $qs = 'bs.objektid="' . $ids['objektid'] . '"';
+    }
+} else if (isset($_GET['objektid'])) {
     $qs = 'bs.objektid="' . addslashes($_GET['objektid']) . '"';
-} else if ($repo['ident'] == 'bibsys' && isset($_GET['dokid'])) {
+} else if (isset($_GET['dokid'])) {
     $qs = 'bs.dokid="' . addslashes($_GET['dokid']) . '"';
-} else if ($repo['ident'] == 'bibsys' && isset($_GET['isbn'])) {
+} else if (isset($_GET['isbn'])) {
     $qs = 'bs.isbn="' . addslashes($_GET['isbn']) . '"';
 } else {
     usage();
@@ -96,6 +76,8 @@ $output['sru_url'] = "$baseurl$qs";
 $xml = new QuiteSimpleXMLElement($source);
 $xml->registerXPathNamespaces($ns);
 $output['numberOfRecords'] = (int)$xml->text('/srw:searchRetrieveResponse/srw:numberOfRecords');
+
+$holdingsParser = new HoldingsParser;
 
 $diag = $xml->first('/srw:searchRetrieveResponse/srw:diagnostics');
 if ($diag !== false) {
@@ -120,12 +102,9 @@ if ($output['numberOfRecords'] > 0) {
 
     $holdings = array();
     foreach ($record->xpath('marc:record[@type="Holdings"]') as $node) {
-        $o = array();
-        $o['dokid'] = $node->text('marc:controlfield[@tag="001"]');
-        $o['a'] = $node->text('marc:datafield[@tag="852"]/marc:subfield[@code="a"]');
-        $o['b'] = $node->text('marc:datafield[@tag="852"]/marc:subfield[@code="b"]');
-        $o['c'] = $node->text('marc:datafield[@tag="852"]/marc:subfield[@code="c"]');
-        $holdings[] = $o;
+
+        $holdings[] = $holdingsParser->parse($node);
+
     }
 
     $output['holdings'] = $holdings;
