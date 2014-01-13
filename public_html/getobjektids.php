@@ -4,6 +4,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
 require_once('../vendor/autoload.php');
+require_once('common.php');
 
 use Danmichaelo\QuiteSimpleXMLElement\QuiteSimpleXMLElement;
 
@@ -25,17 +26,6 @@ function usage() {
 	exit();	
 }
 
-function file_get_contents2($url) {
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'UBO Scriptotek Dalek');
-    curl_setopt($ch, CURLOPT_HEADER, 0); // no headers in the output
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); // return instead of output
-    $data = curl_exec($ch);
-    curl_close($ch);
-    return $data;
-}
-
 function make_query($cql, $start = 1, $count = 10) {
     return http_build_query(array(
         'version' => '1.2',
@@ -47,17 +37,6 @@ function make_query($cql, $start = 1, $count = 10) {
     ));
 }
 
-function return_json($obj) {
-    if (isset($_REQUEST['callback'])) {
-        header('Content-type: application/javascript; charset=utf-8');
-        echo $_REQUEST['callback'] . '(' . json_encode($obj) . ')';
-        exit();
-    } else {
-        header('Content-type: application/json; charset=utf-8');
-        echo json_encode($obj);
-        exit();
-    }
-}
 if (!isset($_GET['isbn'])) usage();
 $isbn = $_GET['isbn'];
 if (empty($isbn)) usage();
