@@ -14,6 +14,15 @@ function file_get_contents2($url) {
     return $data;
 }
 
+function is_isbn($id) {
+    // både dokid og objektid har lengde 9
+    // todo: more sophisticated check
+    if (strlen($id) == '13' || strlen($id) == '10') {
+        return true;
+    }
+    return false;
+}
+
 function return_json($obj) {
     if (isset($_REQUEST['callback'])) {
         header('Content-type: application/javascript; charset=utf-8');
@@ -22,7 +31,11 @@ function return_json($obj) {
     } else {
         header('Access-Control-Allow-Origin: *');
         header('Content-type: application/json; charset=utf-8');
-        echo json_encode($obj);
+        if (version_compare(PHP_VERSION, '5.4.0') >= 0) {
+            echo json_encode($obj, JSON_PRETTY_PRINT);
+        } else {
+            echo json_encode($obj);
+        }
         exit();
     }
 }
@@ -64,3 +77,24 @@ function uio_or_local_ip() {
     if ($ip == ip2long('192.165.67.230') || $ip == ip2long('212.71.253.164') || $ip == ip2long('127.0.0.1')) return true;
     return false;
 }
+
+/*function handleCorsPreflight($allowGet = true, $allowPost = false) {
+    // respond to preflights
+    if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+        // return only the headers and not the content
+        // only allow CORS if we're doing a GET
+        if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD'])) {
+
+            if ($allowGet && $_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD'] == 'GET') {
+                header('Access-Control-Allow-Origin: *');
+                header('Access-Control-Allow-Headers: X-Requested-With');
+            }
+            if ($allowPost && $_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD'] == 'POST') {
+                header('Access-Control-Allow-Origin: *');
+                header('Access-Control-Allow-Headers: X-Requested-With');
+            }
+        }
+        exit;
+    }
+}
+*/

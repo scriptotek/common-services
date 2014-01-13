@@ -30,16 +30,18 @@ function usage($repos) {
 }
 
 if (!isset($_GET['repo'])) {
-    if (isset($_GET['objektid']) || isset($_GET['dokid']) || isset($_GET['id'])) {
-        $repo = $repos['bibsys'];
-    } else {
-        usage($repos);
-    }
+    $repo = $repos['bibsys'];
 } else if (!isset($repos[$_GET['repo']])) {
     usage($repos);
 } else {
     $repo = $repos[$_GET['repo']];
 }
+
+if (isset($_GET['id']) && is_isbn($_GET['id'])) {
+    $_GET['isbn'] = $_GET['id'];
+    unset($_GET['id']);
+}
+
 
 if (isset($_GET['isbn'])) {
     $isbn = array($_GET['isbn']);
