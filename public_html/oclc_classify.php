@@ -35,7 +35,7 @@ function file_get_contents2($url) {
 
 function make_query($isbn) {
     return http_build_query(array(
-        'isbn' => $isbn,
+        'stdnbr' => $isbn,
         'summary' => false,
         'maxRecs' => 50
         ));
@@ -82,11 +82,14 @@ $status = (int) $xml->first('c:response')->el()->attributes()->code;
 	200:	Unexpected error.
 */
 if ($status === 2) {
-	return_json(parseSingleWorkDetailedResponse($xml));
+	$res = parseSingleWorkDetailedResponse($xml);
+	$res['url'] = $url;
+	return_json($res);
 } else {
 	return_json(array(
 		'success' => false,
-		'status' => $status
+		'status' => $status,
+		'url' => $url,
 	));
 }
 
