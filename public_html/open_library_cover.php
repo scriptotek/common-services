@@ -1,8 +1,23 @@
 <?php
 
-//error_reporting(E_ALL);
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
 
-function pageValid($url){
+require_once('../vendor/autoload.php');
+require_once('common.php');
+
+function usage() {
+    header('Content-type: text/plain;charset=UTF-8');
+    print "Bruk: \n\n"
+        . "\t" . 'http://'.$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'] ."?id=<number>\n\n"
+        . "\tder id er et isbn-nr.\n\n"
+		. "\tisbn som identifikator kan også brukes.\n\n"
+        . "Eksempel:\n\n\t".'http://'.$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'] ."?id=9780393082876\n\n\t\teller\n\n"
+		. "\t".'http://'.$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'] ."?isbn=9780393082876\n\n";
+    exit(); 
+}
+
+function pageInValid($url){
 
 	$ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $url);
@@ -17,37 +32,24 @@ function pageValid($url){
 
 	//Kall rekursivt dersom redirect
 	if ($info["redirect_url"]!="") {
-		if (pageValid($info["redirect_url"])) {
-			return true; 
+		if (pageInValid($info["redirect_url"])) {
+			return false; 
 		}
 		else {
-			return false;
+			return $info["http_code"];
 		}
 	}
 	//Generisk oppslagsfeil
 	if (intval($info["http_code"])>=300){
-		return false;
+		return "HTTP-ERROR: ".$info["http_code"];
 	}
 	//Null størrelse
 	if ($info["size_download"]=="0") {
-		return false;
+		return "Bildet har ingen størrelse";
 	}	
 
-	return true;
+	return false;
 }
-
-function return_json($obj) {
-    if (isset($_REQUEST['callback'])) {
-        header('Content-type: application/javascript; charset=utf-8');
-        echo $_REQUEST['callback'] . '(' . json_encode($obj) . ')';
-        exit();
-    } else {
-        header('Content-type: application/json; charset=utf-8');
-        echo json_encode($obj);
-        exit();
-    }
-}
-
 
 function getRedirectUrl($url){
 
@@ -69,19 +71,43 @@ function getRedirectUrl($url){
 	return "";
 }
 
-$isbn=$_GET["isbn"];
+if (isset($_GET["id"])) $isbn=$_GET["id"];
 
-$isbn=trim(str_replace("-", "",$isbn));
-$isbn=strtoupper($isbn);
+elseif (isset($_GET["isbn"])) $isbn=$_GET["isbn"];
 
-$url="http://covers.openlibrary.org/b/isbn/".$isbn."-L.jpg?default=false";
-
-$redir=getRedirectUrl($url);
-if ($redir) {
-	$url=$redir;
+else {
+    usage();
 }
 
-if (pageValid($url)) return_json(array('url' => trim($url)));
-else return_json(array('url' => null));
+if (is_isbn($isbn)) {
+
+	$isbn=trim(str_replace("-", "",$isbn));
+	$isbn=strtoupper($isbn);
+
+	$url="http://covers.openlibrary.org/b/isbn/".$isbn."-L.jpg?default=false";
+
+	$redir=getRedirectUrl($url);
+	if ($redir) {
+		$url=$redir;
+	}
+
+	$error=pageInValid($url);
+
+	if (!$error) return_json(array('url' => trim($url)));
+	else {
+		return_json(array('error' => $error));
+	}
+}
+
+else {
+
+	return_json(array('error' => 'Ikke gyldig isbn-nr!'));
+
+}
+
+
+
+
+
 
 ?>

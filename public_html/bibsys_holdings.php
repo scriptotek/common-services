@@ -65,7 +65,7 @@ if (isset($_GET['id'])) {
     usage();
 }
 
-$output = array('holdings' => array());
+$output = array('queried_item' => $ids, 'holdings' => array());
 
 $qs = make_query($qs, 1, 1, $repo['schema']);
 $baseurl = $repo['url'];

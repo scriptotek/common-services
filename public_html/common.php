@@ -6,7 +6,7 @@ ini_set('display_errors', '1');
 function file_get_contents2($url) {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'UBO Scriptotek Dalek');
+    curl_setopt($ch, CURLOPT_USERAGENT, 'UBO Scriptotek Dalek (+labs.biblionaut.net)');
     curl_setopt($ch, CURLOPT_HEADER, 0); // no headers in the output
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); // return instead of output
     $data = curl_exec($ch);
@@ -73,10 +73,14 @@ function uio_ip() {
 }
 
 function uio_or_local_ip() {
+    $ip  = ip2long($_SERVER['REMOTE_ADDR']);
     if (uio_ip()) return true;
     if ($ip == ip2long('192.165.67.230') || $ip == ip2long('212.71.253.164') || $ip == ip2long('127.0.0.1')) return true;
     return false;
 }
+
+$config = json_decode(file_get_contents(__DIR__ . '/../config.json'), true);
+
 
 /*function handleCorsPreflight($allowGet = true, $allowPost = false) {
     // respond to preflights
